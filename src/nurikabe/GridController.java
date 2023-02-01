@@ -32,6 +32,7 @@ public class GridController {
     @FXML
     public void initialize() {
         grid = Nurikabe.getGrid();
+        Nurikabe.printGrid();
         for (int i = 0; i < size; i += squareSize) {
             for (int j = 0; j < size; j += squareSize) {
                 if(grid[gridY][gridX] == 0){ // Če je prazno pobarvamo belo

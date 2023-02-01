@@ -18,8 +18,11 @@ public class Nurikabe extends Application {
     public static void main(String[] args) throws FileNotFoundException {
         // Preberemo vhodno datoteko
         readFile();
+        // Starting techniques
         islandOfOne();
         separatedByOneSquare();
+        diagonallyAdjacent();
+        // Basic techniques
         launch(args);
     }
 
@@ -71,6 +74,22 @@ public class Nurikabe extends Application {
         }
     }
 
+    public static void diagonallyAdjacent(){
+        for(int i = 0; i < grid.length; i++){
+            for(int j = 0; j < grid.length; j++){
+                if(grid[i][j] > 0 && i + 1 < 10 &&  j + 1 < 10 && grid[i+1][j+1] > 0){
+                    grid[i+1][j] = -1;
+                    grid[i][j+1] = -1;
+                }
+                if(grid[i][j] > 0 && i - 1 > 0 &&  j + 1 < 10 && grid[i-1][j+1] > 0){
+                    grid[i-1][j] = -1;
+                    grid[i][j+1] = -1;
+                    System.out.println(grid[i][j] + " " + grid[i-1][j-1]);
+                }
+            }
+        }
+    }
+
     public static void readFile() throws FileNotFoundException {
         Scanner sc = new Scanner(new BufferedReader(new FileReader("primer1.txt")));
         while(sc.hasNextLine()) {
@@ -83,6 +102,10 @@ public class Nurikabe extends Application {
         }
 
         // Izpis matrike
+        printGrid();
+    }
+
+    public static void printGrid(){
         for(int i = 0; i < grid.length; i++){
             for(int j = 0; j < grid.length; j++){
                 System.out.print(grid[i][j] + " ");
