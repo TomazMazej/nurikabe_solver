@@ -16,9 +16,9 @@ public class GridController {
     Pane pane;
 
     // Velikost okna
-    private int size = 500;
+    private int size = 420;
     // Število kvadratkov v vrstici
-    private int spots = 10;
+    private int spots = Nurikabe.size;
     // Velikost kvadratkov
     private int squareSize = size / spots;
     // Centriramo številko

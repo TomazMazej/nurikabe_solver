@@ -13,7 +13,8 @@ import java.util.Arrays;
 import java.util.Scanner;
 
 public class Nurikabe extends Application {
-    public static int [][] grid = new int[10][10];
+    public static final int size = 10;
+    public static int [][] grid = new int[size][size];
 
     public static void main(String[] args) throws FileNotFoundException {
         // Preberemo vhodno datoteko
@@ -23,6 +24,8 @@ public class Nurikabe extends Application {
         separatedByOneSquare();
         diagonallyAdjacent();
         // Basic techniques
+        surroundedSquare();
+
         launch(args);
     }
 
@@ -44,16 +47,16 @@ public class Nurikabe extends Application {
         for(int i = 0; i < grid.length; i++){
             for(int j = 0; j < grid.length; j++){
                 if(grid[i][j] == 1){
-                    if(i+1 < 10){
+                    if(i+1 < size){
                         grid[i+1][j] =-1;
                     }
-                    if(i-1 > 0){
+                    if(i-1 >= 0){
                         grid[i-1][j] =-1;
                     }
-                    if(j+1 < 10){
+                    if(j+1 < size){
                         grid[i][j+1] =-1;
                     }
-                    if(j-1 > 0){
+                    if(j-1 >= 0){
                         grid[i][j-1] =-1;
                     }
                 }
@@ -64,10 +67,10 @@ public class Nurikabe extends Application {
     public static void separatedByOneSquare(){
         for(int i = 0; i < grid.length; i++){
             for(int j = 0; j < grid.length; j++){
-                if(grid[i][j] > 0 && i + 2 < 10 && grid[i+2][j] > 0){
+                if(grid[i][j] > 0 && i + 2 < size && grid[i+2][j] > 0){
                     grid[i+1][j] = -1;
                 }
-                if(grid[i][j] > 0 && j + 2 < 10 && grid[i][j+2] > 0){
+                if(grid[i][j] > 0 && j + 2 < size && grid[i][j+2] > 0){
                     grid[i][j+1] = -1;
                 }
             }
@@ -77,14 +80,34 @@ public class Nurikabe extends Application {
     public static void diagonallyAdjacent(){
         for(int i = 0; i < grid.length; i++){
             for(int j = 0; j < grid.length; j++){
-                if(grid[i][j] > 0 && i + 1 < 10 &&  j + 1 < 10 && grid[i+1][j+1] > 0){
+                if(grid[i][j] > 0 && i + 1 < size &&  j + 1 < size && grid[i+1][j+1] > 0){
                     grid[i+1][j] = -1;
                     grid[i][j+1] = -1;
                 }
-                if(grid[i][j] > 0 && i - 1 > 0 &&  j + 1 < 10 && grid[i-1][j+1] > 0){
+                if(grid[i][j] > 0 && i - 1 > 0 &&  j + 1 < size && grid[i-1][j+1] > 0){
                     grid[i-1][j] = -1;
                     grid[i][j+1] = -1;
                     System.out.println(grid[i][j] + " " + grid[i-1][j-1]);
+                }
+            }
+        }
+    }
+
+    public static void surroundedSquare(){
+        for(int i = 0; i < grid.length; i++){
+            for(int j = 0; j < grid.length; j++){
+                if(i + 1 == size && grid[i][j] == 0){
+                    if(j + 1 == size){
+                        if(grid[i-1][j] == -1 && grid[i][j-1] == -1){
+                            grid[i][j] = -1;
+                        }
+                    } else if(j - 1 < 0){
+                        if(grid[i-1][j] == -1 && grid[i][j+1] == -1){
+                            grid[i][j] = -1;
+                        }
+                    } else if(grid[i][j+1] == -1 && grid[i][j-1] == -1 && grid[i-1][j] == -1){
+                        grid[i][j] = -1;
+                    }
                 }
             }
         }
