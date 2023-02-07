@@ -14,6 +14,7 @@ public class Island {
         this.y = y;
         this.size = size;
         this.coordinates = new ArrayList<IslandCoordinate>();
+        coordinates.add(new IslandCoordinate(x, y));
     }
 
     public int getX() {
