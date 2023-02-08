@@ -41,7 +41,7 @@ public class GridController {
         int gridY = 0;
         int [][] grid = Nurikabe.getContainer().getGrid();
 
-        Nurikabe.printGrid();
+        // Nurikabe.printGrid();
         for (int i = 0; i < size; i += squareSize) {
             for (int j = 0; j < size; j += squareSize) {
                 if(grid[gridY][gridX] == unknown){ // Če je prazno pobarvamo sivo

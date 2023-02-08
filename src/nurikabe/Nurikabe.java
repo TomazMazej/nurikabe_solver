@@ -14,13 +14,14 @@ import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.util.Scanner;
+import java.util.*;
+
+import static java.lang.Math.abs;
 
 public class Nurikabe extends Application {
     // Grid
     public static final int grid_size = 10;
     public static Container container;
-    public static int land = 0;
 
     // Polja
     public static final int island = 9999;
@@ -61,6 +62,7 @@ public class Nurikabe extends Application {
     public static void loop() {
         // OSNOVNE HEVRISTIKE
         unreachableBlocks(); // Polnjenje nedosegljivih blokov
+        unreachableBlocks2(); // Polnjenje nedosegljivih blokov iz posamezne točke
         islandOfOne(); // Dodajanje morja enojnim otokom
         separatedByOneSquare(); // Dodajanje morja med otoka, ki imata skupnega soseda
         diagonallyAdjacent(); // Dodajanje morja med otoka, ki imata skupno diagonalo
@@ -71,11 +73,11 @@ public class Nurikabe extends Application {
         // Dodamo otok otokom s samo eno možnostjo razvoja
 
         // NAPREDNE HEVRISTIKE
-        //dfs(); // Dodajanje virtualnih otokov za iskanje morja (dfs)
+        seaConstraint(); // bfs
         // naivno iskanje nedosegljivih celic
 
         /*if(isError()){
-            FAIL
+            return;
         }
         if(c se je spremenil)
             break;
@@ -85,19 +87,117 @@ public class Nurikabe extends Application {
         }*/
     }
 
-    public static void dfs(){
-        int total_sea = grid_size*grid_size - land;
-        int [][] grid_copy = container.getGrid();
+    public static int[][] copyArray(int[][] grid){
+        int[][] copy = new int[grid_size][grid_size];
+        for (int i = 0; i < grid_size; i++) {
+            copy[i] = grid[i].clone();
+        }
+        return copy;
+    }
 
-        for(int i = 0; i < grid_size; i++) {
-            for (int j = 0; j < grid_size; j++) {
-                if(grid_copy[i][j] == unknown){
-                    grid_copy[i][j] = island;
-                    // vse 4 strani
+    public static void seaConstraint(){
+        int [][] grid_copy = copyArray(container.getGrid());
 
+        for(int x = 0; x < grid_size; x++) {
+            for (int y = 0; y < grid_size; y++) {
+                if (grid_copy[x][y] == unknown) {
+                    grid_copy[x][y] = island;
+                    if(x+1 < grid_size) {
+                        if(grid_copy[x + 1][y] == sea){
+                            if(!bfs(grid_copy, x + 1, y)){
+                                container.getGrid()[x][y] = sea;
+                                return;
+                            } else{
+                                grid_copy[x][y] = unknown;
+                                continue;
+                            }
+                        }
+                    }
+                    if(x-1 >= 0) {
+                        if(grid_copy[x - 1][y] == sea){
+                            if(!bfs(grid_copy, x - 1, y)){
+                                container.getGrid()[x][y] = sea;
+                                return;
+                            } else{
+                                grid_copy[x][y] = unknown;
+                                continue;
+                            }
+                        }
+                    }
+                    if(y+1 < grid_size) {
+                        if(grid_copy[x][y + 1] == sea){
+                            if(!bfs(grid_copy, x, y + 1)){
+                                container.getGrid()[x][y] = sea;
+                                return;
+                            } else{
+                                grid_copy[x][y] = unknown;
+                                continue;
+                            }
+                        }
+                    }
+                    if(y-1 >= 0) {
+                        if(grid_copy[x][y - 1] == sea){
+                            if(!bfs(grid_copy, x, y - 1)){
+                                container.getGrid()[x][y] = sea;
+                                return;
+                            } else{
+                                grid_copy[x][y] = unknown;
+                                continue;
+                            }
+                        }
+                    }
+                    grid_copy[x][y] = unknown;
                 }
             }
         }
+    }
+
+    public static boolean bfs(int [][] grid_copy1, int x, int y){
+        int [][] grid_copy = copyArray(grid_copy1);
+        ArrayList<IslandCoordinate> queue = new ArrayList<>();
+        queue.add(new IslandCoordinate(x, y));
+        grid_copy[x][y] = island;
+
+        while (queue.size() > 0) {
+            IslandCoordinate p = queue.get(0);
+            x = p.getX();
+            y = p.getY();
+
+            if(x+1 < grid_size) {
+                if(grid_copy[x + 1][y] <= unknown){
+                    grid_copy[x + 1][y] = island;
+                    queue.add(new IslandCoordinate(x + 1, y));
+                }
+            }
+            if(x-1 >= 0) {
+                if(grid_copy[x - 1][y] <= unknown){
+                    grid_copy[x - 1][y] = island;
+                    queue.add(new IslandCoordinate(x - 1, y));
+                }
+            }
+            if(y+1 < grid_size) {
+                if(grid_copy[x][y + 1] <= unknown){
+                    grid_copy[x][y + 1] = island;
+                    queue.add(new IslandCoordinate(x, y + 1));
+                }
+            }
+            if(y-1 >= 0) {
+                if(grid_copy[x][y - 1] <= unknown){
+                    grid_copy[x][y - 1] = island;
+                    queue.add(new IslandCoordinate(x, y - 1));
+                }
+            }
+            queue.remove(0);
+        }
+
+        for(int i = 0; i < grid_size; i++) {
+            for (int j = 0; j < grid_size; j++) {
+                if (grid_copy[i][j] == sea) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public static void finishedIsland(){
@@ -131,8 +231,37 @@ public class Nurikabe extends Application {
                     boolean reachable = false;
                     for(int k = 0; k < container.getIslands().size(); k++){
                         Island island = container.getIslands().get(k);
-                        if(Point2D.distance(i, j, island.getX(), island.getY()) < island.getSize()){
+                        int dist = abs(i - island.getX()) + abs(j - island.getY());
+                        if(dist < island.getSize()){
                             reachable = true;
+                            break;
+                        }
+                    }
+                    if(!reachable){
+                        container.getGrid()[i][j] = sea;
+                    }
+                }
+            }
+        }
+    }
+
+    public static void unreachableBlocks2(){
+        for(int i = 0; i < grid_size; i++){
+            for(int j = 0; j < grid_size; j++){
+                if(container.getGrid()[i][j] == unknown){
+                    boolean reachable = false;
+                    for(int k = 0; k < container.getIslands().size(); k++){
+                        Island island = container.getIslands().get(k);
+                        int d = island.getSize() - island.getCoordinates().size();
+                        for(int l = 0; l < island.getCoordinates().size(); l++){
+                            int dist = abs(i - island.getCoordinates().get(l).getX()) + abs(j - island.getCoordinates().get(l).getY());
+                            if(dist <= d){
+                                reachable = true;
+                                break;
+                            }
+                        }
+                        if(reachable){
+                            break;
                         }
                     }
                     if(!reachable){
@@ -241,7 +370,17 @@ public class Nurikabe extends Application {
         }
 
         // Voda se deli na 2 dela
-
+        for(int x = 0; x < grid_size; x++) {
+            for (int y = 0; y < grid_size; y++) {
+                if (container.getGrid()[x][y] == sea) {
+                    if (!bfs(container.getGrid(), x, y)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
         return false;
     }
 
@@ -264,7 +403,6 @@ public class Nurikabe extends Application {
                 if(container.getGrid()[i][j] > 0){
                     Island island = new Island(i, j, container.getGrid()[i][j]);
                     container.addIsland(island);
-                    land += container.getGrid()[i][j];
                 }
             }
         }
