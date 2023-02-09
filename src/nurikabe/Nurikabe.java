@@ -17,6 +17,7 @@ import java.io.FileReader;
 import java.util.*;
 
 import static java.lang.Math.abs;
+import static java.lang.Math.max;
 
 public class Nurikabe extends Application {
     // Grid
@@ -67,10 +68,10 @@ public class Nurikabe extends Application {
         separatedByOneSquare(); // Dodajanje morja med otoka, ki imata skupnega soseda
         diagonallyAdjacent(); // Dodajanje morja med otoka, ki imata skupno diagonalo
         finishedIsland(); // Dodajanje morja že dokončanim otokom
-
-        // Dodamo morje na diagonalo, ko je otoku preostalo še samo 1 mesto za širjenje, mesti za širjenje pa sta v smeri iste diagonale
-        // Diagonalno sekanje otokov z 2 možnima razvojema
-        // Dodamo otok otokom s samo eno možnostjo razvoja
+        calculatePossibilities();
+        onlyOnePossibility(); // Dodamo otok otokom s samo eno možnostjo razvoja
+        oneRemainingInDiagonal(); // Dodamo morje na diagonalo, ko je otoku preostalo še samo 1 mesto za širjenje, mesti za širjenje pa sta v smeri iste diagonale
+        twoPossibilityDiagonal(); // Diagonalno sekanje otokov z 2 možnima razvojema
 
         // NAPREDNE HEVRISTIKE
         seaConstraint(); // bfs
@@ -224,6 +225,49 @@ public class Nurikabe extends Application {
         }
     }
 
+    public static void twoPossibilityDiagonal(){
+        for(int i = 0; i < container.getIslands().size(); i++){
+            Island island = container.getIslands().get(i);
+            if(island.getPossibilities().size() == 2){
+                IslandCoordinate islandCoordinate1 = island.getPossibilities().get(0);
+                IslandCoordinate islandCoordinate2 = island.getPossibilities().get(1);
+                if(abs(islandCoordinate1.getX() - islandCoordinate2.getX()) == 1 && abs(islandCoordinate1.getY() - islandCoordinate2.getY()) == 1){
+                    if(container.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()] > 0){
+                        container.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()] = max(container.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()], sea);
+                    }
+                    if(container.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()] > 0){
+                        container.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()] = max(container.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()], sea);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void oneRemainingInDiagonal(){
+        for(int i = 0; i < container.getIslands().size(); i++){
+            Island island = container.getIslands().get(i);
+            if(island.getPossibilities().size() == 2 && island.getSize() - island.getCoordinates().size() == 1){
+                IslandCoordinate islandCoordinate1 = island.getPossibilities().get(0);
+                IslandCoordinate islandCoordinate2 = island.getPossibilities().get(1);
+                if(abs(islandCoordinate1.getX() - islandCoordinate2.getX()) == 1 && abs(islandCoordinate1.getY() - islandCoordinate2.getY()) == 1){
+                    container.getGrid()[islandCoordinate1.getX()][islandCoordinate1.getY()] = max(container.getGrid()[islandCoordinate1.getX()][islandCoordinate1.getY()], sea);
+                    container.getGrid()[islandCoordinate2.getX()][islandCoordinate2.getY()] = max(container.getGrid()[islandCoordinate2.getX()][islandCoordinate2.getY()], sea);
+                }
+            }
+        }
+    }
+
+    public static void onlyOnePossibility(){
+        for(int i = 0; i < container.getIslands().size(); i++){
+            Island island = container.getIslands().get(i);
+            if(island.getPossibilities().size() == 1){
+                IslandCoordinate islandCoordinate = island.getPossibilities().get(0);
+                island.addCoordinate(islandCoordinate);
+                container.getGrid()[islandCoordinate.getX()][islandCoordinate.getY()] = 9999;
+            }
+        }
+    }
+
     public static void unreachableBlocks(){
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
@@ -323,32 +367,38 @@ public class Nurikabe extends Application {
         }
     }
 
-    public static boolean canIslandExpand(Island island){
-        int x = island.getX();
-        int y = island.getY();
-        int counter = 0;
+    public static void calculatePossibilities(){
 
-        if(x+1 < grid_size) {
-            if(container.getGrid()[x + 1][y] == unknown){
-                counter += 1;
+        for(int i = 0; i < container.getIslands().size(); i++){
+            Island island = container.getIslands().get(i);
+            island.getPossibilities().clear();
+            for(int j = 0; j < island.getCoordinates().size(); j++){
+                int x = island.getCoordinates().get(j).getX();
+                int y = island.getCoordinates().get(j).getY();
+
+                if(x+1 < grid_size) {
+                    if(container.getGrid()[x + 1][y] == unknown){
+                        island.addPossibility(new IslandCoordinate(x + 1, y));
+                    }
+                }
+                if(x-1 >= 0) {
+                    if(container.getGrid()[x - 1][y] == unknown){
+                        island.addPossibility(new IslandCoordinate(x - 1, y));
+                    }
+                }
+                if(y+1 < grid_size) {
+                    if(container.getGrid()[x][y + 1] == unknown){
+                        island.addPossibility(new IslandCoordinate(x, y + 1));
+                    }
+                }
+                if(y-1 >= 0) {
+                    if(container.getGrid()[x][y - 1] == unknown){
+                        island.addPossibility(new IslandCoordinate(x, y - 1));
+                    }
+                }
             }
+
         }
-        if(x-1 >= 0) {
-            if(container.getGrid()[x - 1][y] == unknown){
-                counter += 1;
-            }
-        }
-        if(y+1 < grid_size) {
-            if(container.getGrid()[x][y + 1] == unknown){
-                counter += 1;
-            }
-        }
-        if(y-1 >= 0) {
-            if(container.getGrid()[x][y - 1] == unknown){
-                counter += 1;
-            }
-        }
-        return counter > 0;
     }
 
     public static boolean isError(){
@@ -364,7 +414,7 @@ public class Nurikabe extends Application {
         // Otok se ne more več širiti
         for(int k = 0; k < container.getIslands().size(); k++){
             Island island = container.getIslands().get(k);
-            if(!canIslandExpand(island) && island.getCoordinates().size() != island.getSize()){
+            if(island.getPossibilities().size() == 0 && island.getCoordinates().size() != island.getSize()){
                 return true;
             }
         }

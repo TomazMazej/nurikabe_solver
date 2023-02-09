@@ -8,6 +8,7 @@ public class Island {
     int y;
     int size;
     ArrayList<IslandCoordinate> coordinates;
+    ArrayList<IslandCoordinate> possibilities;
 
     public Island(int x, int y, int size) {
         this.x = x;
@@ -15,6 +16,15 @@ public class Island {
         this.size = size;
         this.coordinates = new ArrayList<IslandCoordinate>();
         coordinates.add(new IslandCoordinate(x, y));
+        this.possibilities = new ArrayList<IslandCoordinate>();
+    }
+
+    public void addCoordinate(IslandCoordinate coordinate){
+        coordinates.add(coordinate);
+    }
+
+    public void addPossibility(IslandCoordinate possibility){
+        possibilities.add(possibility);
     }
 
     public int getX() {
@@ -47,5 +57,13 @@ public class Island {
 
     public void setCoordinates(ArrayList<IslandCoordinate> coordinates) {
         this.coordinates = coordinates;
+    }
+
+    public ArrayList<IslandCoordinate> getPossibilities() {
+        return possibilities;
+    }
+
+    public void setPossibilities(ArrayList<IslandCoordinate> possibilities) {
+        this.possibilities = possibilities;
     }
 }
