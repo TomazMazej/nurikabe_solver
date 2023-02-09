@@ -21,7 +21,7 @@ import static java.lang.Math.max;
 
 public class Nurikabe extends Application {
     // Grid
-    public static final int grid_size = 10;
+    public static final int grid_size = 6;
     public static Container container;
 
     // Polja
@@ -342,11 +342,15 @@ public class Nurikabe extends Application {
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
                 if(container.getGrid()[i][j] > 0 && i + 2 < grid_size && container.getGrid()[i+2][j] > 0){
-                    container.getGrid()[i+1][j] = sea;
+                    if(container.getGrid()[i+1][j] <= 0){
+                        container.getGrid()[i+1][j] = sea;
+                    }
                 }
 
                 if(container.getGrid()[i][j] > 0 && j + 2 < grid_size && container.getGrid()[i][j+2] > 0){
-                    container.getGrid()[i][j+1] = sea;
+                    if(container.getGrid()[i][j+1] <= 0) {
+                        container.getGrid()[i][j+1] = sea;
+                    }
                 }
             }
         }
@@ -356,12 +360,16 @@ public class Nurikabe extends Application {
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
                 if(container.getGrid()[i][j] > 0 && i + 1 < grid_size &&  j + 1 < grid_size && container.getGrid()[i+1][j+1] > 0){
-                    container.getGrid()[i+1][j] = sea;
-                    container.getGrid()[i][j+1] = sea;
+                    if(container.getGrid()[i+1][j] <= 0 && container.getGrid()[i][j+1] <= 0) {
+                        container.getGrid()[i + 1][j] = sea;
+                        container.getGrid()[i][j + 1] = sea;
+                    }
                 }
                 if(container.getGrid()[i][j] > 0 && i - 1 > 0 &&  j + 1 < grid_size && container.getGrid()[i-1][j+1] > 0){
-                    container.getGrid()[i-1][j] = sea;
-                    container.getGrid()[i][j+1] = sea;
+                    if(container.getGrid()[i-1][j] <= 0 && container.getGrid()[i][j+1] <= 0){
+                        container.getGrid()[i-1][j] = sea;
+                        container.getGrid()[i][j+1] = sea;
+                    }
                 }
             }
         }
@@ -437,7 +445,7 @@ public class Nurikabe extends Application {
     public static void readFile() throws FileNotFoundException {
         // Preberemo grid iz datoteke
         int [][] grid = new int[grid_size][grid_size];
-        Scanner sc = new Scanner(new BufferedReader(new FileReader("primer1.txt")));
+        Scanner sc = new Scanner(new BufferedReader(new FileReader("primer2.txt")));
         while(sc.hasNextLine()) {
             for (int i=0; i<grid_size; i++) {
                 String[] line = sc.nextLine().trim().split(" ");
