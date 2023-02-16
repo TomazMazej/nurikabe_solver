@@ -19,6 +19,14 @@ public class Island {
         this.possibilities = new ArrayList<IslandCoordinate>();
     }
 
+    public Island(int x, int y, int size, ArrayList<IslandCoordinate> ic) {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.coordinates = ic;
+        this.possibilities = new ArrayList<IslandCoordinate>();
+    }
+
     public void addCoordinate(IslandCoordinate coordinate){
         coordinates.add(coordinate);
     }

@@ -26,7 +26,7 @@ public class GridController {
     Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1),
             e ->{
                 updateGrid();
-                // Nurikabe.loop();
+                // Nurikabe.nurikabe();
             } ));
 
     @FXML
@@ -41,7 +41,6 @@ public class GridController {
         int gridY = 0;
         int [][] grid = Nurikabe.getContainer().getGrid();
 
-        // Nurikabe.printGrid();
         for (int i = 0; i < size; i += squareSize) {
             for (int j = 0; j < size; j += squareSize) {
                 if(grid[gridY][gridX] == unknown){ // Če je prazno pobarvamo sivo

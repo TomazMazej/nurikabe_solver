@@ -29,8 +29,11 @@ public class Nurikabe extends Application {
     public static final int sea = -1;
     public static final int unknown = 0;
 
+    public static boolean isRunning = true;
+
     public static void main(String[] args) throws FileNotFoundException {
         readFile(); // Preberemo primer v grid
+        nurikabe(container);
         launch(args);
     }
 
@@ -46,7 +49,7 @@ public class Nurikabe extends Application {
 
             EventHandler<ActionEvent> event = new EventHandler<ActionEvent>() {
                 public void handle(ActionEvent e) {
-                    loop();
+                    nurikabe(container);
                 }
             };
             btn.setOnAction(event);
@@ -60,32 +63,80 @@ public class Nurikabe extends Application {
         }
     }
 
-    public static void loop() {
-        // OSNOVNE HEVRISTIKE
-        unreachableBlocks(); // Polnjenje nedosegljivih blokov
-        unreachableBlocks2(); // Polnjenje nedosegljivih blokov iz posamezne točke
-        islandOfOne(); // Dodajanje morja enojnim otokom
-        separatedByOneSquare(); // Dodajanje morja med otoka, ki imata skupnega soseda
-        diagonallyAdjacent(); // Dodajanje morja med otoka, ki imata skupno diagonalo
-        finishedIsland(); // Dodajanje morja že dokončanim otokom
-        calculatePossibilities();
-        onlyOnePossibility(); // Dodamo otok otokom s samo eno možnostjo razvoja
-        oneRemainingInDiagonal(); // Dodamo morje na diagonalo, ko je otoku preostalo še samo 1 mesto za širjenje, mesti za širjenje pa sta v smeri iste diagonale
-        twoPossibilityDiagonal(); // Diagonalno sekanje otokov z 2 možnima razvojema
+    public static void nurikabe(Container c) {
+        while (isRunning) {
+            int[][] grid_copy = copyArray(c.getGrid()); // Naredimo kopijo grida za vsako ko naredimo poskus
+            loop(c); // Naredimo hevristike
 
-        // NAPREDNE HEVRISTIKE
-        seaConstraint(); // bfs
-        // naivno iskanje nedosegljivih celic
+            if (isError(c)) { // Če kateri od pogojev ne ustreza, končamo poskus
+                return;
+            }
+            if(getNumOfMoves(grid_copy) == 0){ // Če so vsi pogoji ustrezali in ni več možnih potez smo končali
+                container = copyContainer(c);
+                isRunning = false;
+                printGrid(c);
+                System.out.println("KONEC");
+                return;
+            }
+            if (compareGrids(grid_copy, c.getGrid())) { // Če ni prišlo do sprememb naredimo naključno potezo
+                for(int i = 0; i < c.getIslands().size(); i++) {
+                    Island c_island = c.getIslands().get(i);
+                    for(int j = 0; j < c_island.getPossibilities().size(); j++) {
+                        Container c2 = copyContainer(c);
+                        IslandCoordinate ic = c_island.getPossibilities().get(j);
+                        c2.getIslands().get(i).addCoordinate(ic);
+                        c2.grid[ic.getX()][ic.getY()] = island;
+                        nurikabe(c2);
+                        if(!isRunning){
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-        /*if(isError()){
-            return;
+    public static void loop(Container c) {
+        unreachableBlocks(c); // Polnjenje nedosegljivih blokov
+        unreachableBlocks2(c); // Polnjenje nedosegljivih blokov iz posamezne točke
+        islandOfOne(c); // Dodajanje morja enojnim otokom
+        separatedByOneSquare(c); // Dodajanje morja med otoka, ki imata skupnega soseda
+        diagonallyAdjacent(c); // Dodajanje morja med otoka, ki imata skupno diagonalo
+        finishedIsland(c); // Dodajanje morja že dokončanim otokom
+        calculatePossibilities(c);
+        onlyOnePossibility(c); // Dodamo otok otokom s samo eno možnostjo razvoja
+        oneRemainingInDiagonal(c); // Dodamo morje na diagonalo, ko je otoku preostalo še samo 1 mesto za širjenje, mesti za širjenje pa sta v smeri iste diagonale
+        twoPossibilityDiagonal(c); // Diagonalno sekanje otokov z 2 možnima razvojema
+        seaConstraint(c); // bfs
+    }
+
+    public static boolean compareGrids(int[][] grid1, int[][] grid2) {
+        for(int i = 0; i < grid_size; i++) {
+            for (int j = 0; j < grid_size; j++) {
+                if (grid1[i][j] != grid2[i][j]) {
+                    return false;
+                }
+            }
         }
-        if(c se je spremenil)
-            break;
+        return true;
+    }
+
+    public static int getNumOfMoves(int[][] grid) {
+        int num_moves = 0;
+        for(int i = 0; i < grid_size; i++) {
+            for (int j = 0; j < grid_size; j++) {
+                if (grid[i][j] == unknown) {
+                    num_moves += 1;
+                }
+            }
         }
-        if(c ostane enak skozi vse hevristike){
-            naključna poteza
-        }*/
+        return num_moves;
+    }
+
+    public static Container copyContainer(Container c){
+        Container c2 = new Container(copyArray(c.getGrid()));
+        c2.setIslands(copyIslands(c));
+        return c2;
     }
 
     public static int[][] copyArray(int[][] grid){
@@ -96,8 +147,25 @@ public class Nurikabe extends Application {
         return copy;
     }
 
-    public static void seaConstraint(){
-        int [][] grid_copy = copyArray(container.getGrid());
+    public static ArrayList<Island> copyIslands(Container c){
+        ArrayList<Island> islands = new ArrayList<>();
+        for(int i = 0; i < c.getIslands().size(); i++) {
+            Island c_island = c.getIslands().get(i);
+            islands.add(new Island(c_island.getX(), c_island.getY(), c_island.getSize(), copyCoordinates(c_island.getCoordinates())));
+        }
+        return islands;
+    }
+
+    public static ArrayList<IslandCoordinate> copyCoordinates(ArrayList<IslandCoordinate> ic){
+        ArrayList<IslandCoordinate> ic2 = new ArrayList<IslandCoordinate>();
+        for(IslandCoordinate i : ic){
+            ic2.add(new IslandCoordinate(i.getX(), i.getY()));
+        }
+        return  ic2;
+    }
+
+    public static void seaConstraint(Container c){
+        int [][] grid_copy = copyArray(c.getGrid());
 
         for(int x = 0; x < grid_size; x++) {
             for (int y = 0; y < grid_size; y++) {
@@ -106,7 +174,7 @@ public class Nurikabe extends Application {
                     if(x+1 < grid_size) {
                         if(grid_copy[x + 1][y] == sea){
                             if(!bfs(grid_copy, x + 1, y)){
-                                container.getGrid()[x][y] = sea;
+                                c.getGrid()[x][y] = sea;
                                 return;
                             } else{
                                 grid_copy[x][y] = unknown;
@@ -117,7 +185,7 @@ public class Nurikabe extends Application {
                     if(x-1 >= 0) {
                         if(grid_copy[x - 1][y] == sea){
                             if(!bfs(grid_copy, x - 1, y)){
-                                container.getGrid()[x][y] = sea;
+                                c.getGrid()[x][y] = sea;
                                 return;
                             } else{
                                 grid_copy[x][y] = unknown;
@@ -128,7 +196,7 @@ public class Nurikabe extends Application {
                     if(y+1 < grid_size) {
                         if(grid_copy[x][y + 1] == sea){
                             if(!bfs(grid_copy, x, y + 1)){
-                                container.getGrid()[x][y] = sea;
+                                c.getGrid()[x][y] = sea;
                                 return;
                             } else{
                                 grid_copy[x][y] = unknown;
@@ -139,7 +207,7 @@ public class Nurikabe extends Application {
                     if(y-1 >= 0) {
                         if(grid_copy[x][y - 1] == sea){
                             if(!bfs(grid_copy, x, y - 1)){
-                                container.getGrid()[x][y] = sea;
+                                c.getGrid()[x][y] = sea;
                                 return;
                             } else{
                                 grid_copy[x][y] = unknown;
@@ -201,80 +269,80 @@ public class Nurikabe extends Application {
         return true;
     }
 
-    public static void finishedIsland(){
-        for(int i = 0; i < container.getIslands().size(); i++){
-            Island island = container.getIslands().get(i);
+    public static void finishedIsland(Container c){
+        for(int i = 0; i < c.getIslands().size(); i++){
+            Island island = c.getIslands().get(i);
             if(island.getCoordinates().size() == island.getSize()){
                 for(int j = 0; j < island.getCoordinates().size(); j++){
                     int x = island.getCoordinates().get(j).getX();
                     int y = island.getCoordinates().get(j).getY();
-                    if(x+1 < grid_size && container.getGrid()[x + 1][y] == unknown) {
-                        container.getGrid()[x + 1][y] = sea;
+                    if(x+1 < grid_size && c.getGrid()[x + 1][y] == unknown) {
+                        c.getGrid()[x + 1][y] = sea;
                     }
-                    if(x-1 >= 0 && container.getGrid()[x-1][y] == unknown) {
-                        container.getGrid()[x-1][y] = sea;
+                    if(x-1 >= 0 && c.getGrid()[x-1][y] == unknown) {
+                        c.getGrid()[x-1][y] = sea;
                     }
-                    if(y+1 < grid_size && container.getGrid()[x][y + 1] == unknown) {
-                        container.getGrid()[x][y + 1] = sea;
+                    if(y+1 < grid_size && c.getGrid()[x][y + 1] == unknown) {
+                        c.getGrid()[x][y + 1] = sea;
                     }
-                    if(y-1 >= 0 && container.getGrid()[x][y - 1] == unknown) {
-                        container.getGrid()[x][y - 1] = sea;
+                    if(y-1 >= 0 && c.getGrid()[x][y - 1] == unknown) {
+                        c.getGrid()[x][y - 1] = sea;
                     }
                 }
             }
         }
     }
 
-    public static void twoPossibilityDiagonal(){
-        for(int i = 0; i < container.getIslands().size(); i++){
-            Island island = container.getIslands().get(i);
+    public static void twoPossibilityDiagonal(Container c){
+        for(int i = 0; i < c.getIslands().size(); i++){
+            Island island = c.getIslands().get(i);
             if(island.getPossibilities().size() == 2){
                 IslandCoordinate islandCoordinate1 = island.getPossibilities().get(0);
                 IslandCoordinate islandCoordinate2 = island.getPossibilities().get(1);
                 if(abs(islandCoordinate1.getX() - islandCoordinate2.getX()) == 1 && abs(islandCoordinate1.getY() - islandCoordinate2.getY()) == 1){
-                    if(container.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()] > 0){
-                        container.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()] = max(container.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()], sea);
+                    if(c.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()] > 0){
+                        c.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()] = max(c.getGrid()[islandCoordinate1.getX()][islandCoordinate2.getY()], sea);
                     }
-                    if(container.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()] > 0){
-                        container.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()] = max(container.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()], sea);
+                    if(c.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()] > 0){
+                        c.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()] = max(c.getGrid()[islandCoordinate2.getX()][islandCoordinate1.getY()], sea);
                     }
                 }
             }
         }
     }
 
-    public static void oneRemainingInDiagonal(){
-        for(int i = 0; i < container.getIslands().size(); i++){
-            Island island = container.getIslands().get(i);
+    public static void oneRemainingInDiagonal(Container c){
+        for(int i = 0; i < c.getIslands().size(); i++){
+            Island island = c.getIslands().get(i);
             if(island.getPossibilities().size() == 2 && island.getSize() - island.getCoordinates().size() == 1){
                 IslandCoordinate islandCoordinate1 = island.getPossibilities().get(0);
                 IslandCoordinate islandCoordinate2 = island.getPossibilities().get(1);
                 if(abs(islandCoordinate1.getX() - islandCoordinate2.getX()) == 1 && abs(islandCoordinate1.getY() - islandCoordinate2.getY()) == 1){
-                    container.getGrid()[islandCoordinate1.getX()][islandCoordinate1.getY()] = max(container.getGrid()[islandCoordinate1.getX()][islandCoordinate1.getY()], sea);
-                    container.getGrid()[islandCoordinate2.getX()][islandCoordinate2.getY()] = max(container.getGrid()[islandCoordinate2.getX()][islandCoordinate2.getY()], sea);
+                    c.getGrid()[islandCoordinate1.getX()][islandCoordinate1.getY()] = max(c.getGrid()[islandCoordinate1.getX()][islandCoordinate1.getY()], sea);
+                    c.getGrid()[islandCoordinate2.getX()][islandCoordinate2.getY()] = max(c.getGrid()[islandCoordinate2.getX()][islandCoordinate2.getY()], sea);
                 }
             }
         }
     }
 
-    public static void onlyOnePossibility(){
-        for(int i = 0; i < container.getIslands().size(); i++){
-            Island island = container.getIslands().get(i);
+    public static void onlyOnePossibility(Container c){
+        for(int i = 0; i < c.getIslands().size(); i++){
+            Island island = c.getIslands().get(i);
             if(island.getPossibilities().size() == 1){
                 IslandCoordinate islandCoordinate = island.getPossibilities().get(0);
                 island.addCoordinate(islandCoordinate);
-                container.getGrid()[islandCoordinate.getX()][islandCoordinate.getY()] = 9999;
+                c.getGrid()[islandCoordinate.getX()][islandCoordinate.getY()] = 9999;
             }
         }
     }
 
-    public static void unreachableBlocks(){
+    public static void unreachableBlocks(Container c){
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
-                if(container.getGrid()[i][j] == unknown){
+                if(c.getGrid()[i][j] == unknown){
                     boolean reachable = false;
-                    for(int k = 0; k < container.getIslands().size(); k++){
-                        Island island = container.getIslands().get(k);
+                    for(int k = 0; k < c.getIslands().size(); k++){
+                        Island island = c.getIslands().get(k);
                         int dist = abs(i - island.getX()) + abs(j - island.getY());
                         if(dist < island.getSize()){
                             reachable = true;
@@ -282,20 +350,20 @@ public class Nurikabe extends Application {
                         }
                     }
                     if(!reachable){
-                        container.getGrid()[i][j] = sea;
+                        c.getGrid()[i][j] = sea;
                     }
                 }
             }
         }
     }
 
-    public static void unreachableBlocks2(){
+    public static void unreachableBlocks2(Container c){
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
-                if(container.getGrid()[i][j] == unknown){
+                if(c.getGrid()[i][j] == unknown){
                     boolean reachable = false;
-                    for(int k = 0; k < container.getIslands().size(); k++){
-                        Island island = container.getIslands().get(k);
+                    for(int k = 0; k < c.getIslands().size(); k++){
+                        Island island = c.getIslands().get(k);
                         int d = island.getSize() - island.getCoordinates().size();
                         for(int l = 0; l < island.getCoordinates().size(); l++){
                             int dist = abs(i - island.getCoordinates().get(l).getX()) + abs(j - island.getCoordinates().get(l).getY());
@@ -309,119 +377,118 @@ public class Nurikabe extends Application {
                         }
                     }
                     if(!reachable){
-                        container.getGrid()[i][j] = sea;
+                        c.getGrid()[i][j] = sea;
                     }
                 }
             }
         }
     }
 
-    public static void islandOfOne(){
-        for(int i = 0; i < container.getIslands().size(); i++){
-            if(container.getIslands().get(i).size == 1){
-                int x = container.getIslands().get(i).x;
-                int y = container.getIslands().get(i).y;
+    public static void islandOfOne(Container c){
+        for(int i = 0; i < c.getIslands().size(); i++){
+            if(c.getIslands().get(i).size == 1){
+                int x = c.getIslands().get(i).x;
+                int y = c.getIslands().get(i).y;
 
                 if(x+1 < grid_size) {
-                    container.getGrid()[x + 1][y] = sea;
+                    c.getGrid()[x + 1][y] = sea;
                 }
                 if(x-1 >= 0) {
-                    container.getGrid()[x-1][y] = sea;
+                    c.getGrid()[x-1][y] = sea;
                 }
                 if(y+1 < grid_size) {
-                    container.getGrid()[x][y + 1] = sea;
+                    c.getGrid()[x][y + 1] = sea;
                 }
                 if(y-1 >= 0) {
-                    container.getGrid()[x][y - 1] = sea;
+                    c.getGrid()[x][y - 1] = sea;
                 }
             }
         }
     }
 
-    public static void separatedByOneSquare(){
+    public static void separatedByOneSquare(Container c){
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
-                if(container.getGrid()[i][j] > 0 && i + 2 < grid_size && container.getGrid()[i+2][j] > 0){
-                    if(container.getGrid()[i+1][j] <= 0){
-                        container.getGrid()[i+1][j] = sea;
+                if(c.getGrid()[i][j] > 0 && i + 2 < grid_size && c.getGrid()[i+2][j] > 0){
+                    if(c.getGrid()[i+1][j] <= 0){
+                        c.getGrid()[i+1][j] = sea;
                     }
                 }
 
-                if(container.getGrid()[i][j] > 0 && j + 2 < grid_size && container.getGrid()[i][j+2] > 0){
-                    if(container.getGrid()[i][j+1] <= 0) {
-                        container.getGrid()[i][j+1] = sea;
+                if(c.getGrid()[i][j] > 0 && j + 2 < grid_size && c.getGrid()[i][j+2] > 0){
+                    if(c.getGrid()[i][j+1] <= 0) {
+                        c.getGrid()[i][j+1] = sea;
                     }
                 }
             }
         }
     }
 
-    public static void diagonallyAdjacent(){
+    public static void diagonallyAdjacent(Container c){
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
-                if(container.getGrid()[i][j] > 0 && i + 1 < grid_size &&  j + 1 < grid_size && container.getGrid()[i+1][j+1] > 0){
-                    if(container.getGrid()[i+1][j] <= 0 && container.getGrid()[i][j+1] <= 0) {
-                        container.getGrid()[i + 1][j] = sea;
-                        container.getGrid()[i][j + 1] = sea;
+                if(c.getGrid()[i][j] > 0 && i + 1 < grid_size &&  j + 1 < grid_size && c.getGrid()[i+1][j+1] > 0){
+                    if(c.getGrid()[i+1][j] <= 0 && c.getGrid()[i][j+1] <= 0) {
+                        c.getGrid()[i + 1][j] = sea;
+                        c.getGrid()[i][j + 1] = sea;
                     }
                 }
-                if(container.getGrid()[i][j] > 0 && i - 1 > 0 &&  j + 1 < grid_size && container.getGrid()[i-1][j+1] > 0){
-                    if(container.getGrid()[i-1][j] <= 0 && container.getGrid()[i][j+1] <= 0){
-                        container.getGrid()[i-1][j] = sea;
-                        container.getGrid()[i][j+1] = sea;
+                if(c.getGrid()[i][j] > 0 && i - 1 > 0 &&  j + 1 < grid_size && c.getGrid()[i-1][j+1] > 0){
+                    if(c.getGrid()[i-1][j] <= 0 && c.getGrid()[i][j+1] <= 0){
+                        c.getGrid()[i-1][j] = sea;
+                        c.getGrid()[i][j+1] = sea;
                     }
                 }
             }
         }
     }
 
-    public static void calculatePossibilities(){
+    public static void calculatePossibilities(Container c){
 
-        for(int i = 0; i < container.getIslands().size(); i++){
-            Island island = container.getIslands().get(i);
+        for(int i = 0; i < c.getIslands().size(); i++){
+            Island island = c.getIslands().get(i);
             island.getPossibilities().clear();
             for(int j = 0; j < island.getCoordinates().size(); j++){
                 int x = island.getCoordinates().get(j).getX();
                 int y = island.getCoordinates().get(j).getY();
 
                 if(x+1 < grid_size) {
-                    if(container.getGrid()[x + 1][y] == unknown){
+                    if(c.getGrid()[x + 1][y] == unknown){
                         island.addPossibility(new IslandCoordinate(x + 1, y));
                     }
                 }
                 if(x-1 >= 0) {
-                    if(container.getGrid()[x - 1][y] == unknown){
+                    if(c.getGrid()[x - 1][y] == unknown){
                         island.addPossibility(new IslandCoordinate(x - 1, y));
                     }
                 }
                 if(y+1 < grid_size) {
-                    if(container.getGrid()[x][y + 1] == unknown){
+                    if(c.getGrid()[x][y + 1] == unknown){
                         island.addPossibility(new IslandCoordinate(x, y + 1));
                     }
                 }
                 if(y-1 >= 0) {
-                    if(container.getGrid()[x][y - 1] == unknown){
+                    if(c.getGrid()[x][y - 1] == unknown){
                         island.addPossibility(new IslandCoordinate(x, y - 1));
                     }
                 }
             }
-
         }
     }
 
-    public static boolean isError(){
+    public static boolean isError(Container c){
         // Pride do morja velikost 2x2
-        for(int i = 0; i < grid_size; i++){
-            for(int j = 0; j < grid_size; j++) {
-                if(container.getGrid()[i][j] == sea && container.getGrid()[i+1][j] == sea && container.getGrid()[i][j+1] == sea && container.getGrid()[i+1][j+1] == sea){
+        for(int i = 0; i < grid_size-1; i++){
+            for(int j = 0; j < grid_size-1; j++) {
+                if(c.getGrid()[i][j] == sea && c.getGrid()[i+1][j] == sea && c.getGrid()[i][j+1] == sea && c.getGrid()[i+1][j+1] == sea){
                     return true;
                 }
             }
         }
 
         // Otok se ne more več širiti
-        for(int k = 0; k < container.getIslands().size(); k++){
-            Island island = container.getIslands().get(k);
+        for(int k = 0; k < c.getIslands().size(); k++){
+            Island island = c.getIslands().get(k);
             if(island.getPossibilities().size() == 0 && island.getCoordinates().size() != island.getSize()){
                 return true;
             }
@@ -430,8 +497,8 @@ public class Nurikabe extends Application {
         // Voda se deli na 2 dela
         for(int x = 0; x < grid_size; x++) {
             for (int y = 0; y < grid_size; y++) {
-                if (container.getGrid()[x][y] == sea) {
-                    if (!bfs(container.getGrid(), x, y)) {
+                if (c.getGrid()[x][y] == sea) {
+                    if (!bfs(c.getGrid(), x, y)) {
                         return true;
                     } else {
                         return false;
@@ -466,13 +533,14 @@ public class Nurikabe extends Application {
         }
     }
 
-    public static void printGrid(){
+    public static void printGrid(Container c){
         for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
-                System.out.print(container.grid[i][j] + " ");
+                System.out.print(c.grid[i][j] + " ");
             }
             System.out.println();
         }
+        System.out.println();
     }
 
     public static Container getContainer() {
