@@ -15,15 +15,15 @@ Java program that solves nurikabe puzzle.
 * File name should be in following format:
 
 0 0 0 0 0 0 <br>
-0 0 0 0 4 0
-3 0 2 0 0 0
-0 3 0 0 2 0
-0 0 0 0 0 0
+0 0 0 0 4 0 <br>
+3 0 2 0 0 0 <br>
+0 3 0 0 2 0 <br>
+0 0 0 0 0 0 <br>
 0 0 0 0 0 1
 
-* 0 - unknown
-* -1 - sea
-* 9999 or number - island
+* 0 => unknown
+* -1 => sea
+* 9999 or number => island
 
 ## Pictures
 ![Image1](/pictures/10x10.PNG)
