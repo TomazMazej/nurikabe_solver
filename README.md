@@ -13,6 +13,7 @@ Java program that solves nurikabe puzzle.
 * Set global variable **grid_size** to prefered size.
 * Set global variable **filename** to your file name.
 * File name should be in following format:
+
 0 0 0 0 0 0
 0 0 0 0 4 0
 3 0 2 0 0 0
@@ -20,9 +21,9 @@ Java program that solves nurikabe puzzle.
 0 0 0 0 0 0
 0 0 0 0 0 1
 
-*0 - unknown
-*-1 - sea
-*9999 or number - island
+* 0 - unknown
+* -1 - sea
+* 9999 or number - island
 
 ## Pictures
 ![Image1](/pictures/10x10.PNG)
