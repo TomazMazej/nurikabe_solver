@@ -10,7 +10,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 
-import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -20,11 +19,14 @@ import static java.lang.Math.abs;
 import static java.lang.Math.max;
 
 public class Nurikabe extends Application {
-    // Grid
-    public static final int grid_size = 6;
+    // Nastavitve mreže
+    public static final int grid_size = 10;
+    public static final String filename = "10x10.txt";
+
+    // Container, ki hrani mrežo in otoke
     public static Container container;
 
-    // Polja
+    // Možna polja
     public static final int island = 9999;
     public static final int sea = -1;
     public static final int unknown = 0;
@@ -33,7 +35,6 @@ public class Nurikabe extends Application {
 
     public static void main(String[] args) throws FileNotFoundException {
         readFile(); // Preberemo primer v grid
-        nurikabe(container);
         launch(args);
     }
 
@@ -42,17 +43,28 @@ public class Nurikabe extends Application {
         try {
             FXMLLoader loader = new FXMLLoader();
             BorderPane root = (BorderPane)loader.load(getClass().getResource("Grid.fxml").openStream());
-            Button btn = new Button("Next");
+            Button btn = new Button("Start");
+            Button btn2 = new Button("Debug");
 
-            root.setPadding(new Insets(10, 0, 0, 0));
+            root.setPadding(new Insets(10, 0, 10, 0));
             root.setTop(btn);
+            root.setBottom(btn2);
 
             EventHandler<ActionEvent> event = new EventHandler<ActionEvent>() {
                 public void handle(ActionEvent e) {
+                    long start = System.currentTimeMillis();
                     nurikabe(container);
+                    long end = System.currentTimeMillis();;
+                    System.out.println("Time: " + (end - start) / 1000F + "s");
+                }
+            };
+            EventHandler<ActionEvent> event2 = new EventHandler<ActionEvent>() {
+                public void handle(ActionEvent e) {
+                    debug(container);
                 }
             };
             btn.setOnAction(event);
+            btn2.setOnAction(event2);
 
             primaryStage.setTitle("Nurikabe Solver");
             primaryStage.setScene(new Scene(root));
@@ -65,10 +77,9 @@ public class Nurikabe extends Application {
 
     public static void nurikabe(Container c) {
         while (isRunning) {
-            int[][] grid_copy = copyArray(c.getGrid()); // Naredimo kopijo grida za vsako ko naredimo poskus
-            loop(c); // Naredimo hevristike
-
-            if (isError(c)) { // Če kateri od pogojev ne ustreza, končamo poskus
+            int[][] grid_copy = copyArray(c.getGrid()); // Naredimo kopijo mreže za vsako, ko naredimo poskus
+            executeHeuristics(c); // Izvedemo vse hevristike
+            if (isError(c)) { // Če, kateri od pogojev ne ustreza, končamo poskus
                 return;
             }
             if(getNumOfMoves(grid_copy) == 0){ // Če so vsi pogoji ustrezali in ni več možnih potez smo končali
@@ -96,72 +107,51 @@ public class Nurikabe extends Application {
         }
     }
 
-    public static void loop(Container c) {
+    public static void debug(Container cx) {
+        Container c = copyContainer(cx);
+        int[][] grid_copy = copyArray(c.getGrid()); // Naredimo kopijo mreže za vsako, ko naredimo poskus
+        executeHeuristics(c); // Izvedemo vse hevristike
+        printGrid(c);
+        if (isError(c)) { // Če, kateri od pogojev ne ustreza, končamo poskus
+            return;
+        }
+        if(getNumOfMoves(grid_copy) == 0){ // Če so vsi pogoji ustrezali in ni več možnih potez smo končali
+            container = copyContainer(c);
+            isRunning = false;
+            printGrid(c);
+            System.out.println("KONEC");
+            return;
+        }
+        if (compareGrids(grid_copy, c.getGrid())) { // Če ni prišlo do sprememb naredimo naključno potezo
+            for(int i = 0; i < c.getIslands().size(); i++) {
+                Island c_island = c.getIslands().get(i);
+                for(int j = 0; j < c_island.getPossibilities().size(); j++) {
+                    Container c2 = copyContainer(c);
+                    IslandCoordinate ic = c_island.getPossibilities().get(j);
+                    c2.getIslands().get(i).addCoordinate(ic);
+                    c2.grid[ic.getX()][ic.getY()] = island;
+                    nurikabe(c2);
+                    if(!isRunning){
+                        return;
+                    }
+                }
+            }
+        }
+        setContainer(c);
+    }
+
+    public static void executeHeuristics(Container c) {
         unreachableBlocks(c); // Polnjenje nedosegljivih blokov
         unreachableBlocks2(c); // Polnjenje nedosegljivih blokov iz posamezne točke
         islandOfOne(c); // Dodajanje morja enojnim otokom
         separatedByOneSquare(c); // Dodajanje morja med otoka, ki imata skupnega soseda
         diagonallyAdjacent(c); // Dodajanje morja med otoka, ki imata skupno diagonalo
         finishedIsland(c); // Dodajanje morja že dokončanim otokom
-        calculatePossibilities(c);
+        calculatePossibilities(c); // Izračunamo možnosti vsakega otoka
         onlyOnePossibility(c); // Dodamo otok otokom s samo eno možnostjo razvoja
         oneRemainingInDiagonal(c); // Dodamo morje na diagonalo, ko je otoku preostalo še samo 1 mesto za širjenje, mesti za širjenje pa sta v smeri iste diagonale
         twoPossibilityDiagonal(c); // Diagonalno sekanje otokov z 2 možnima razvojema
         seaConstraint(c); // bfs
-    }
-
-    public static boolean compareGrids(int[][] grid1, int[][] grid2) {
-        for(int i = 0; i < grid_size; i++) {
-            for (int j = 0; j < grid_size; j++) {
-                if (grid1[i][j] != grid2[i][j]) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    public static int getNumOfMoves(int[][] grid) {
-        int num_moves = 0;
-        for(int i = 0; i < grid_size; i++) {
-            for (int j = 0; j < grid_size; j++) {
-                if (grid[i][j] == unknown) {
-                    num_moves += 1;
-                }
-            }
-        }
-        return num_moves;
-    }
-
-    public static Container copyContainer(Container c){
-        Container c2 = new Container(copyArray(c.getGrid()));
-        c2.setIslands(copyIslands(c));
-        return c2;
-    }
-
-    public static int[][] copyArray(int[][] grid){
-        int[][] copy = new int[grid_size][grid_size];
-        for (int i = 0; i < grid_size; i++) {
-            copy[i] = grid[i].clone();
-        }
-        return copy;
-    }
-
-    public static ArrayList<Island> copyIslands(Container c){
-        ArrayList<Island> islands = new ArrayList<>();
-        for(int i = 0; i < c.getIslands().size(); i++) {
-            Island c_island = c.getIslands().get(i);
-            islands.add(new Island(c_island.getX(), c_island.getY(), c_island.getSize(), copyCoordinates(c_island.getCoordinates())));
-        }
-        return islands;
-    }
-
-    public static ArrayList<IslandCoordinate> copyCoordinates(ArrayList<IslandCoordinate> ic){
-        ArrayList<IslandCoordinate> ic2 = new ArrayList<IslandCoordinate>();
-        for(IslandCoordinate i : ic){
-            ic2.add(new IslandCoordinate(i.getX(), i.getY()));
-        }
-        return  ic2;
     }
 
     public static void seaConstraint(Container c){
@@ -221,8 +211,8 @@ public class Nurikabe extends Application {
         }
     }
 
-    public static boolean bfs(int [][] grid_copy1, int x, int y){
-        int [][] grid_copy = copyArray(grid_copy1);
+    public static boolean bfs(int [][] grid, int x, int y){
+        int [][] grid_copy = copyArray(grid);
         ArrayList<IslandCoordinate> queue = new ArrayList<>();
         queue.add(new IslandCoordinate(x, y));
         grid_copy[x][y] = island;
@@ -444,7 +434,6 @@ public class Nurikabe extends Application {
     }
 
     public static void calculatePossibilities(Container c){
-
         for(int i = 0; i < c.getIslands().size(); i++){
             Island island = c.getIslands().get(i);
             island.getPossibilities().clear();
@@ -510,9 +499,8 @@ public class Nurikabe extends Application {
     }
 
     public static void readFile() throws FileNotFoundException {
-        // Preberemo grid iz datoteke
         int [][] grid = new int[grid_size][grid_size];
-        Scanner sc = new Scanner(new BufferedReader(new FileReader("primer2.txt")));
+        Scanner sc = new Scanner(new BufferedReader(new FileReader(filename)));
         while(sc.hasNextLine()) {
             for (int i=0; i<grid_size; i++) {
                 String[] line = sc.nextLine().trim().split(" ");
@@ -522,8 +510,8 @@ public class Nurikabe extends Application {
             }
         }
 
-        container = new Container(grid); // Dodamo grid v container
-        for(int i = 0; i < grid_size; i++){ // Dodamo otoke v container
+        container = new Container(grid);
+        for(int i = 0; i < grid_size; i++){
             for(int j = 0; j < grid_size; j++){
                 if(container.getGrid()[i][j] > 0){
                     Island island = new Island(i, j, container.getGrid()[i][j]);
@@ -531,6 +519,60 @@ public class Nurikabe extends Application {
                 }
             }
         }
+    }
+
+    public static Container copyContainer(Container c){
+        Container c2 = new Container(copyArray(c.getGrid()));
+        c2.setIslands(copyIslands(c));
+        return c2;
+    }
+
+    public static int[][] copyArray(int[][] grid){
+        int[][] copy = new int[grid_size][grid_size];
+        for (int i = 0; i < grid_size; i++) {
+            copy[i] = grid[i].clone();
+        }
+        return copy;
+    }
+
+    public static ArrayList<Island> copyIslands(Container c){
+        ArrayList<Island> islands = new ArrayList<>();
+        for(int i = 0; i < c.getIslands().size(); i++) {
+            Island c_island = c.getIslands().get(i);
+            islands.add(new Island(c_island.getX(), c_island.getY(), c_island.getSize(), copyCoordinates(c_island.getCoordinates())));
+        }
+        return islands;
+    }
+
+    public static ArrayList<IslandCoordinate> copyCoordinates(ArrayList<IslandCoordinate> ic){
+        ArrayList<IslandCoordinate> ic2 = new ArrayList<IslandCoordinate>();
+        for(IslandCoordinate i : ic){
+            ic2.add(new IslandCoordinate(i.getX(), i.getY()));
+        }
+        return  ic2;
+    }
+
+    public static int getNumOfMoves(int[][] grid) {
+        int num_moves = 0;
+        for(int i = 0; i < grid_size; i++) {
+            for (int j = 0; j < grid_size; j++) {
+                if (grid[i][j] == unknown) {
+                    num_moves += 1;
+                }
+            }
+        }
+        return num_moves;
+    }
+
+    public static boolean compareGrids(int[][] grid1, int[][] grid2) {
+        for(int i = 0; i < grid_size; i++) {
+            for (int j = 0; j < grid_size; j++) {
+                if (grid1[i][j] != grid2[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public static void printGrid(Container c){

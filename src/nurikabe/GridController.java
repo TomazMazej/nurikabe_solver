@@ -18,7 +18,7 @@ public class GridController {
     @FXML
     Pane pane;
 
-    private final int size = 420; // Velikost okna(6x6 = 420, 10x10 = 500)
+    private final int size = 500; // Velikost okna (6x6 = 420, 7x7 = 420, 8x8 = 400, 9x9 = 450, 10x10 = 500)
     private final int spots = Nurikabe.grid_size; // Število kvadratkov v vrstici
     private final int squareSize = size / spots; // Velikost kvadratkov
     private final int center = squareSize/2; // Centriramo številko
@@ -26,7 +26,6 @@ public class GridController {
     Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(1),
             e ->{
                 updateGrid();
-                // Nurikabe.nurikabe();
             } ));
 
     @FXML
