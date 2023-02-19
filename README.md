@@ -14,7 +14,7 @@ Java program that solves nurikabe puzzle.
 * Set global variable **filename** to your file name.
 * File name should be in following format:
 
-0 0 0 0 0 0
+0 0 0 0 0 0 <br>
 0 0 0 0 4 0
 3 0 2 0 0 0
 0 3 0 0 2 0
